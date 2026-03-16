@@ -1,0 +1,60 @@
+{%extends 'users/userbase.html'%}
+{%load static%}
+{%block contents%}
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Training Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        h2 {
+            color: #007BFF;
+        }
+        .metrics {
+            margin-bottom: 20px;
+        }
+        .metrics p {
+            font-size: 1.1em;
+            margin: 6px 0;
+        }
+        .plot {
+            max-width: 600px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: white;
+        }
+        .model-path {
+            margin-top: 20px;
+            font-style: italic;
+            font-size: 0.9em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Model Training Results</h2>
+
+    <div class="metrics">
+        <p><strong>Training Accuracy:</strong> {{ accuracy|floatformat:4 }}</p>
+        <p><strong>Validation Accuracy:</strong> {{ val_accuracy|floatformat:4 }}</p>
+        <p><strong>Training Loss:</strong> {{ loss|floatformat:4 }}</p>
+        <p><strong>Validation Loss:</strong> {{ val_loss|floatformat:4 }}</p>
+    </div>
+
+    <div class="plot">
+        <img src="/{{ plot_path }}" alt="Training Loss and Accuracy Plot" style="width: 100%; height: auto;" />
+    </div>
+
+    <p class="model-path">Model saved at: <code>{{ model_path }}</code></p>
+
+</body>
+</html>
+{%endblock%}

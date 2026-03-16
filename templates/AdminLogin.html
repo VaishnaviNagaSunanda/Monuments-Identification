@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contents %}
+<style>
+    /* Custom Styles for Admin Login Form */
+    .admin-section {
+        background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80') no-repeat center center;
+        background-size: cover;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 0;
+    }
+
+    .admin-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 3rem;
+        max-width: 400px;
+        width: 100%;
+        backdrop-filter: blur(10px);
+        animation: slideInUp 1s ease-out;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .admin-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(to right, #FF5733, #FFBD33, #33FF57, #3357FF);
+    }
+
+    .admin-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #333;
+        text-align: center;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+
+    .admin-title::after {
+        content: '';
+        display: block;
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(to right, #FF5733, #FFBD33);
+        margin: 0.5rem auto;
+        border-radius: 2px;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.8);
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: #3357FF;
+        box-shadow: 0 0 0 3px rgba(51, 87, 255, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .form-group input:hover {
+        border-color: #FFBD33;
+    }
+
+    .btn-group {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .admin-btn {
+        flex: 1;
+        padding: 1rem;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .admin-btn-primary {
+        background: linear-gradient(to right, #FF5733, #FFBD33);
+    }
+
+    .admin-btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255, 87, 51, 0.4);
+        color: white;
+    }
+
+    .admin-btn-secondary {
+        background: linear-gradient(to right, #6c757d, #5a6268);
+    }
+
+    .admin-btn-secondary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(108, 117, 125, 0.4);
+        color: white;
+    }
+
+    .messages {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    .messages.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .messages.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    /* Animations */
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .form-group {
+        opacity: 0;
+        animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    .form-group:nth-child(1) { animation-delay: 0.1s; }
+    .form-group:nth-child(2) { animation-delay: 0.2s; }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Rumor Icon */
+    .rumor-icon {
+        font-size: 3rem;
+        color: #FF5733;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .admin-card {
+            padding: 2rem;
+            margin: 1rem;
+        }
+        .admin-title {
+            font-size: 1.8rem;
+        }
+        .btn-group {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<section class="admin-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-6">
+                <div class="admin-card">
+                    <div class="rumor-icon">🔍</div> <!-- Icon for identification/search -->
+                    <h1 class="admin-title">Admin Login</h1>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <input type="text" class="form-control" name="login_id" placeholder="Enter Login ID" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <input type="password" class="form-control" name="password" placeholder="Enter Password" required>
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button type="submit" class="admin-btn admin-btn-primary">Login</button>
+                            <button type="reset" class="admin-btn admin-btn-secondary">Reset</button>
+                        </div>
+                    </form>
+                    
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="messages {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
