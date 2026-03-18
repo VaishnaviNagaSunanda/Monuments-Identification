@@ -36,12 +36,25 @@
             font-size: 0.9em;
             color: #555;
         }
+        .alert-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
     </style>
 </head>
 <body>
 
     <h2>Model Training Results</h2>
 
+    {% if error %}
+    <div class="alert-warning">
+        <strong>⚠️ Training Unavailable:</strong> {{ error }}
+    </div>
+    {% else %}
     <div class="metrics">
         <p><strong>Training Accuracy:</strong> {{ accuracy|floatformat:4 }}</p>
         <p><strong>Validation Accuracy:</strong> {{ val_accuracy|floatformat:4 }}</p>
@@ -54,7 +67,8 @@
     </div>
 
     <p class="model-path">Model saved at: <code>{{ model_path }}</code></p>
+    {% endif %}
 
 </body>
 </html>
-{%endblock%}
+{%endblock%}

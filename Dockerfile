@@ -26,5 +26,7 @@ USER user
 ENV PYTHONUNBUFFERED=1
 ENV PORT=7860
 
+EXPOSE 7860
+
 # Command to run on start
-CMD ["./start.sh"]
+CMD ["/bin/bash", "./start.sh"]

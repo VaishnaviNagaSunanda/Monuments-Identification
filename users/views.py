@@ -83,6 +83,14 @@ def training(request):
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import Conv2D, MaxPool2D, Flatten, Dense
     from django.shortcuts import render
+    from django.conf import settings as dj_settings
+
+    # ---------- Check dataset availability before training ----------
+    train_dir = os.path.join(dj_settings.MEDIA_ROOT, "Indian-monuments", "images", "train")
+    if not os.path.exists(train_dir):
+        return render(request, "users/training_result.html", {
+            "error": "Training dataset not found on this server. The training feature is only available when running the application locally with the full dataset. The pre-trained model is already deployed and ready for predictions."
+        })
 
     # ---------- Plot Function ----------
     def plot_loss_curves(history, save_path):
@@ -121,21 +129,21 @@ def training(request):
 
     train_data = train_datagen.flow_from_directory(
         train_dir,
-        target_size=(300, 300),
+        target_size=(224, 224),
         batch_size=32,
         class_mode='categorical'
     )
 
     test_data = test_datagen.flow_from_directory(
         test_dir,
-        target_size=(300, 300),
+        target_size=(224, 224),
         batch_size=32,
         class_mode='categorical'
     )
 
     # ---------- CNN Model ----------
     model = Sequential([
-        tf.keras.layers.Input(shape=(300, 300, 3)),   # FIXED INPUT SHAPE
+        tf.keras.layers.Input(shape=(224, 224, 3)),   # FIXED INPUT SHAPE
         Conv2D(10, 3, activation='relu'),
         MaxPool2D(),
         Conv2D(10, 3, activation='relu'),
@@ -159,10 +167,10 @@ def training(request):
         validation_steps=len(test_data)
     )
 
-    # ---------- Save Model in New Format (.keras) ----------
+    # ---------- Save Model in New Format (.h5) ----------
     os.makedirs("models", exist_ok=True)
-    model_save_path = os.path.join("models", "trained_model.keras")
-    model.save(model_save_path)   # FIX: NO H5 FORMAT
+    model_save_path = os.path.join("models", "trained_model.h5")
+    model.save(model_save_path)
 
     # ---------- Save Training Curve ----------
     plot_path = os.path.join("models", "training_plot.png")
@@ -258,6 +266,18 @@ from django.core.files.storage import FileSystemStorage
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.preprocessing import image
+import os
+from django.conf import settings as django_settings
+
+# Load the model ONCE at startup so each request doesn't reload it (fixes timeout)
+_MONUMENT_MODEL = None
+
+def get_model():
+    global _MONUMENT_MODEL
+    if _MONUMENT_MODEL is None:
+        model_path = os.path.join(django_settings.BASE_DIR, 'models', 'trained_model.h5')
+        _MONUMENT_MODEL = tf.keras.models.load_model(model_path, compile=False)
+    return _MONUMENT_MODEL
 
 
 @csrf_exempt
@@ -270,68 +290,84 @@ def prediction(request):
     # If image uploaded
     if request.method == "POST" and 'monument_image' in request.FILES:
 
-        # Load model
-        from django.conf import settings
-        import os
-        model = tf.keras.models.load_model(
-            os.path.join(settings.BASE_DIR, 'models', 'trained_model.keras')
-        )
+        try:
+            import tempfile
 
-        uploaded_file = request.FILES['monument_image']
-        fs = FileSystemStorage()
-        file_path = fs.save(uploaded_file.name, uploaded_file)
-        full_path = fs.path(file_path)
+            # Use cached model (loaded once at startup)
+            model = get_model()
 
-        # Preprocess image
-        img = image.load_img(full_path, target_size=(300, 300))
-        img_array = image.img_to_array(img)
-        img_array = img_array / 255.0
-        img_batch = np.expand_dims(img_array, axis=0)
+            uploaded_file = request.FILES['monument_image']
 
-        # Predict
-        predictions = model.predict(img_batch)
-        predicted_index = np.argmax(predictions[0])
-        confidence = float(np.max(predictions[0])) * 100
+            # Save to /tmp which is always writable (even on Hugging Face)
+            tmp_dir = tempfile.gettempdir()
+            fs = FileSystemStorage(location=tmp_dir, base_url='/tmp/')
+            file_path = fs.save(uploaded_file.name, uploaded_file)
+            full_path = fs.path(file_path)
 
-        THRESHOLD = 70
+            # Preprocess image
+            img = image.load_img(full_path, target_size=(224, 224))
+            img_array = image.img_to_array(img)
+            img_array = img_array / 255.0
+            img_batch = np.expand_dims(img_array, axis=0)
 
-        if confidence < THRESHOLD:
-            predicted_class = "Invalid Image"
-            history = "This image does not belong to the trained monuments dataset."
-            model_3d = ""
-            map_link = ""
-        else:
-            predicted_class = class_names[predicted_index]
+            # Predict
+            predictions = model.predict(img_batch)
+            predicted_index = np.argmax(predictions[0])
+            confidence = float(np.max(predictions[0])) * 100
 
-            info = monument_info.get(predicted_class, {})
-            history = info.get("history", "Information not available.")
-            model_3d = info.get("3d_model_url", "")
-            map_link = info.get("map_location", "")
+            THRESHOLD = 40
 
-        confidence = round(confidence, 2)
+            if confidence < THRESHOLD:
+                predicted_class = "Invalid Image"
+                history = "This image does not belong to the trained monuments dataset."
+                model_3d = ""
+                map_link = ""
+            else:
+                predicted_class = class_names[predicted_index]
+                info = monument_info.get(predicted_class, {})
+                history = info.get("history", "Information not available.")
+                model_3d = info.get("3d_model_url", "")
+                map_link = info.get("map_location", "")
 
-        # If request comes from Expo mobile app
-        if "application/json" in request.headers.get("Accept", ""):
-            return JsonResponse({
-                "uploaded_image": fs.url(file_path),
+            confidence = round(confidence, 2)
+
+            # Build a data URL for the uploaded image so it displays correctly
+            import base64
+            with open(full_path, 'rb') as img_file:
+                img_data = base64.b64encode(img_file.read()).decode('utf-8')
+            ext = uploaded_file.name.split('.')[-1].lower()
+            mime = 'image/jpeg' if ext in ['jpg', 'jpeg'] else f'image/{ext}'
+            uploaded_file_url = f"data:{mime};base64,{img_data}"
+
+            # If request comes from mobile app
+            if "application/json" in request.headers.get("Accept", ""):
+                return JsonResponse({
+                    "uploaded_image": uploaded_file_url,
+                    "predicted_class": predicted_class,
+                    "confidence": confidence,
+                    "history": history,
+                    "model_3d": model_3d,
+                    "map_link": map_link
+                })
+
+            # If request comes from browser form
+            return render(request, "users/monument_prediction.html", {
+                "uploaded_file_url": uploaded_file_url,
                 "predicted_class": predicted_class,
                 "confidence": confidence,
                 "history": history,
                 "model_3d": model_3d,
-                "map_link": map_link
+                "map_link": map_link,
             })
 
-        # If request comes from browser form
-        return render(request, "users/monument_prediction.html", {
-            "uploaded_file_url": fs.url(file_path),
-            "predicted_class": predicted_class,
-            "confidence": confidence,
-            "history": history,
-            "model_3d": model_3d,
-            "map_link": map_link,
-        })
+        except Exception as e:
+            import traceback
+            error_detail = traceback.format_exc()
+            # Always show error detail so we can diagnose HF issues
+            return render(request, "users/monument_prediction.html", {"error": error_detail})
 
     return JsonResponse({"error": "Invalid request"})
+
 
 
 
@@ -345,16 +381,16 @@ def api_predict(request):
 
         from django.conf import settings
         import os
-        model = tf.keras.models.load_model(
-            os.path.join(settings.BASE_DIR, 'models', 'trained_model.keras')
-        )
+        model = get_model()
 
         uploaded_file = request.FILES['monument_image']
-        fs = FileSystemStorage()
+        import tempfile
+        tmp_dir = tempfile.gettempdir()
+        fs = FileSystemStorage(location=tmp_dir, base_url='/tmp/')
         file_path = fs.save(uploaded_file.name, uploaded_file)
         full_path = fs.path(file_path)
 
-        img = image.load_img(full_path, target_size=(300, 300))
+        img = image.load_img(full_path, target_size=(224, 224))
         img_array = image.img_to_array(img)/255.0
         img_batch = np.expand_dims(img_array, axis=0)
 
@@ -363,17 +399,26 @@ def api_predict(request):
         predicted_index = np.argmax(predictions[0])
         confidence = float(np.max(predictions[0])) * 100
 
-        predicted_class = class_names[predicted_index]
-
-        info = monument_info.get(predicted_class, {})
+        THRESHOLD = 40
+        if confidence < THRESHOLD:
+            predicted_class = "Invalid Image"
+            history = "This image does not belong to the trained monuments dataset."
+            model_3d = ""
+            map_link = ""
+        else:
+            predicted_class = class_names[predicted_index]
+            info = monument_info.get(predicted_class, {})
+            history = info.get("history", "")
+            map_link = info.get("map_location", "")
+            model_3d = info.get("3d_model_url", "")
 
         return JsonResponse({
             "uploaded_image": fs.url(file_path),
             "predicted_class": predicted_class,
             "confidence": round(confidence,2),
-            "history": info.get("history",""),
-            "map_link": info.get("map_location",""),
-            "model_3d": info.get("3d_model_url","")
+            "history": history,
+            "map_link": map_link,
+            "model_3d": model_3d
         })
 
     return JsonResponse({"error":"Invalid request"})

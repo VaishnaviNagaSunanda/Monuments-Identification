@@ -20,9 +20,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# AI Model Checkpoints 
-models/
-*.h5
+# AI Model Checkpoints (local training artifacts only)
+# Note: trained_model.h5 is intentionally tracked for deployment
 *.keras
 *.hdf5
 *.png

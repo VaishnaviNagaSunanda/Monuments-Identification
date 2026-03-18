@@ -28,6 +28,13 @@ DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
 # Allow local and huggingface domains automatically
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*, .hf.space').split(',')
 
+# Trust the Hugging Face domain for CSRF (required for forms like login to work)
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.hf.space',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+]
+
 
 # Application definition
 
@@ -124,6 +131,9 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR,'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 if not DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Allow Hugging Face to embed this app in an iframe
+X_FRAME_OPTIONS = 'ALLOWALL'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
