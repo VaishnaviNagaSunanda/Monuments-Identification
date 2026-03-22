@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contents %}
+<style>
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 120px);
+        padding: 2rem 0;
+    }
+
+    .auth-card {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        padding: 3rem;
+        max-width: 650px;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .auth-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 6px;
+        background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6);
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.5rem;
+    }
+    
+    .auth-subtitle {
+        color: #94a3b8;
+        font-size: 0.95rem;
+    }
+
+    /* Grid for form layout */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+    }
+
+    .form-group-full {
+        grid-column: 1 / -1;
+    }
+
+    .form-label {
+        display: block;
+        color: #e2e8f0;
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+        font-weight: 500;
+    }
+
+    .form-control {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 0.8rem 1rem;
+        color: white;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        color: #e2e8f0;
+    }
+
+    .submit-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #10b981, #3b82f6);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 1rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1.5rem;
+        box-shadow: 0 10px 20px -10px rgba(16, 185, 129, 0.5);
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 25px -10px rgba(16, 185, 129, 0.7);
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        font-size: 0.9rem;
+        color: #94a3b8;
+    }
+
+    .auth-footer a, .terms-link {
+        color: #60a5fa;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s;
+    }
+
+    .auth-footer a:hover, .terms-link:hover {
+        color: #93c5fd;
+        text-decoration: underline;
+    }
+
+    /* Messages */
+    .msg-alert {
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+        text-align: center;
+        border: 1px solid;
+        animation: fadeIn 0.5s ease-out;
+    }
+    .msg-alert.success {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: rgba(16, 185, 129, 0.4);
+        color: #34d399;
+        font-weight: 500;
+    }
+    .msg-alert.error {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #f87171;
+    }
+
+    @media (max-width: 600px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        .auth-card {
+            padding: 1.5rem;
+            margin: 1rem;
+            border-radius: 16px;
+        }
+        .auth-title {
+            font-size: 1.8rem;
+        }
+    }
+
+    /* Global Input Visibility */
+    .form-control {
+        color: white !important;
+    }
+    .form-control:focus {
+        color: white !important;
+    }
+</style>
+
+<div class="auth-container fade-in-element">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1 class="auth-title">Create Account</h1>
+            <p class="auth-subtitle">Join us to discover historical monuments</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="msg-alert {% if message.tags == 'success' or 'registered' in message.message|lower or 'success' in message.message|lower %}success{% else %}error{% endif %}" id="status-message">
+                    <i class="fas {% if message.tags == 'success' or 'registered' in message.message|lower or 'success' in message.message|lower %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} mr-2"></i> {{ message }}
+                </div>
+                
+                {% if message.tags == 'success' or 'registered' in message.message|lower or 'success' in message.message|lower %}
+                <script>
+                    setTimeout(function() {
+                        window.location.href = "{% url 'UserLogin' %}";
+                    }, 3000);
+                </script>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+        <form action="{% url 'UserRegisterActions' %}" method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="waiting">
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.name.id_for_label }}">Full Name</label>
+                    <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}" class="form-control" required placeholder="Vyshu">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.loginid.id_for_label }}">Login ID</label>
+                    <input type="text" name="{{ form.loginid.html_name }}" id="{{ form.loginid.id_for_label }}" class="form-control" required placeholder="vyshu123">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+                    <input type="email" name="{{ form.email.html_name }}" id="{{ form.email.id_for_label }}" class="form-control" required placeholder="vyshu@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.mobile.id_for_label }}">Mobile</label>
+                    <input type="text" name="{{ form.mobile.html_name }}" id="{{ form.mobile.id_for_label }}" class="form-control" required placeholder="+91 1234567890">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.city.id_for_label }}">City</label>
+                    <input type="text" name="{{ form.city.html_name }}" id="{{ form.city.id_for_label }}" class="form-control" required placeholder="Hyderabad">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+                    <input type="password" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}" class="form-control" required placeholder="••••••••">
+                </div>
+
+                <div class="form-group-full">
+                    <label class="form-label" for="{{ form.confirm_password.id_for_label }}">Confirm Password</label>
+                    <input type="password" name="{{ form.confirm_password.html_name }}" id="{{ form.confirm_password.id_for_label }}" class="form-control" required placeholder="••••••••">
+                </div>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="terms_agree" required checked> 
+                <label for="terms_agree" class="mb-0 text-sm">I agree to the <a href="{% url 'terms_of_service' %}" class="terms-link" target="_blank">Terms of Service and Privacy Policy</a></label>
+            </div>
+
+            <button class="submit-btn" type="submit">Complete Registration</button>
+            
+            <div class="auth-footer">
+                Already have an account? <a href="{% url 'UserLogin' %}">Sign in here</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

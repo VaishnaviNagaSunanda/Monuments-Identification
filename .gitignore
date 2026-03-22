@@ -1,0 +1,33 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Django Database
+db.sqlite3
+db.sqlite3-journal
+
+# Django Static Media
+media/
+staticfiles/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# AI Model Checkpoints (local training artifacts only)
+# Note: trained_model.h5 is intentionally tracked for deployment
+*.keras
+*.hdf5
+*.png
+
+# IDE and OS Files
+.vscode/
+.idea/
+.DS_Store
+*.swp
