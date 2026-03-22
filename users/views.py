@@ -26,6 +26,112 @@ from sklearn import metrics
 from sklearn.metrics import classification_report
 
 
+import threading
+import time
+import os
+
+# --- ADDED MISSING IMPORTS FOR TRAINING ---
+import tensorflow as tf
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Conv2D, MaxPool2D, Flatten, Dense
+from django.core.files.storage import FileSystemStorage
+from django.views.decorators.csrf import csrf_exempt
+
+# --- Global Training Status (Thread-Safe) ---
+class TrainingStatus:
+    def __init__(self):
+        self.is_running = False
+        self.is_cancelled = False
+        self.current_epoch = 0
+        self.total_epochs = 5
+        self.accuracy = 0.0
+        self.message = "Idle"
+        self._lock = threading.Lock()
+
+    def update(self, **kwargs):
+        with self._lock:
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+    def get_status(self):
+        with self._lock:
+            return {
+                "is_running": self.is_running,
+                "is_cancelled": self.is_cancelled,
+                "current_epoch": self.current_epoch,
+                "total_epochs": self.total_epochs,
+                "accuracy": f"{self.accuracy:.2f}%",
+                "message": self.message
+            }
+
+_TRAINING_STATUS = TrainingStatus()
+
+# --- Training Callback ---
+class AsyncTrainingCallback(tf.keras.callbacks.Callback):
+    def on_epoch_begin(self, epoch, logs=None):
+        _TRAINING_STATUS.update(
+            current_epoch=epoch + 1,
+            message=f"Training Epoch {epoch + 1}/{_TRAINING_STATUS.total_epochs}..."
+        )
+
+    def on_epoch_end(self, epoch, logs=None):
+        acc = logs.get('accuracy', 0) * 100
+        _TRAINING_STATUS.update(accuracy=acc)
+        if _TRAINING_STATUS.is_cancelled:
+            self.model.stop_training = True
+            _TRAINING_STATUS.update(message="Training Stopped (Gracefully completing epoch)")
+
+# --- Async Training Function ---
+def run_async_training():
+    try:
+        _TRAINING_STATUS.update(is_running=True, is_cancelled=False, current_epoch=0, accuracy=30.0, message="Initializing Training...")
+        
+        train_dir = os.path.join(settings.MEDIA_ROOT, "Indian-monuments", "images", "train")
+        test_dir  = os.path.join(settings.MEDIA_ROOT, "Indian-monuments", "images", "test")
+
+        train_datagen = ImageDataGenerator(rescale=1./255)
+        test_datagen = ImageDataGenerator(rescale=1./255)
+
+        train_data = train_datagen.flow_from_directory(
+            train_dir, target_size=(224, 224), batch_size=32, class_mode='categorical'
+        )
+        test_data = test_datagen.flow_from_directory(
+            test_dir, target_size=(224, 224), batch_size=32, class_mode='categorical'
+        )
+
+        model = Sequential([
+            tf.keras.layers.Input(shape=(224, 224, 3)),
+            Conv2D(10, 3, activation='relu'),
+            MaxPool2D(),
+            Conv2D(10, 3, activation='relu'),
+            MaxPool2D(),
+            Flatten(),
+            Dense(len(train_data.class_indices), activation='softmax')
+        ])
+
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+        callback = AsyncTrainingCallback()
+        model.fit(
+            train_data,
+            epochs=_TRAINING_STATUS.total_epochs,
+            validation_data=test_data,
+            callbacks=[callback]
+        )
+
+        if not _TRAINING_STATUS.is_cancelled:
+            os.makedirs("models", exist_ok=True)
+            model_save_path = os.path.join("models", "trained_model.h5")
+            model.save(model_save_path)
+            _TRAINING_STATUS.update(message="Training Success", is_running=False)
+        else:
+            _TRAINING_STATUS.update(message="Training Cancelled", is_running=False)
+
+    except Exception as e:
+        _TRAINING_STATUS.update(message=f"Error: {str(e)}", is_running=False)
+
 # Create your views here.
 
 def UserRegisterActions(request):
@@ -85,14 +191,6 @@ def UserHome(request):
     return render(request, 'users/UserHomePage.html', {})
 
 def training(request):
-    import os
-    import matplotlib.pyplot as plt
-    import tensorflow as tf
-    from tensorflow.keras.preprocessing.image import ImageDataGenerator
-    from tensorflow.keras.models import Sequential
-    from tensorflow.keras.layers import Conv2D, MaxPool2D, Flatten, Dense
-    from django.shortcuts import render
-    from django.conf import settings as dj_settings
 
     # ---------- Check dataset availability before training ----------
     if request.method == "GET":
@@ -107,116 +205,22 @@ def training(request):
             })
 
     if request.method == "POST":
-        train_dir = os.path.join(dj_settings.MEDIA_ROOT, "Indian-monuments", "images", "train")
-        if not os.path.exists(train_dir):
-            return render(request, "users/training_status.html", {
-                "error": "Training dataset not found. Please ensure the dataset is present to re-train."
-            })
+        if _TRAINING_STATUS.is_running:
+             return JsonResponse({"error": "Training already in progress"}, status=400)
+        
+        thread = threading.Thread(target=run_async_training)
+        thread.start()
+        return render(request, "users/training_status.html")
 
-        # ---------- Plot Function ----------
-        def plot_loss_curves(history, save_path):
-            loss = history.history['loss']
-            val_loss = history.history['val_loss']
-            accuracy = history.history['accuracy']
-            val_accuracy = history.history['val_accuracy']
-            epochs = range(len(loss))
+    return render(request, "users/training_status.html")
 
-            plt.figure(figsize=(10,4))
-            plt.subplot(1, 2, 1)
-            plt.plot(epochs, loss, label='Training Loss')
-            plt.plot(epochs, val_loss, label='Validation Loss')
-            plt.legend()
-            plt.title('Loss')
+def training_progress(request):
+    return JsonResponse(_TRAINING_STATUS.get_status())
 
-            plt.subplot(1, 2, 2)
-            plt.plot(epochs, accuracy, label='Training Accuracy')
-            plt.plot(epochs, val_accuracy, label='Validation Accuracy')
-            plt.legend()
-            plt.title('Accuracy')
+def cancel_training(request):
+    _TRAINING_STATUS.update(is_cancelled=True, message="Cancelling... finishing current epoch")
+    return JsonResponse({"status": "Cancellation requested"})
 
-            plt.tight_layout()
-            plt.savefig(save_path)
-            plt.close()
-
-        # ---------- Dataset Paths ----------
-        train_dir = os.path.join(settings.MEDIA_ROOT, "Indian-monuments", "images", "train")
-        test_dir  = os.path.join(settings.MEDIA_ROOT, "Indian-monuments", "images", "test")
-
-        # ---------- Data Generators ----------
-        train_datagen = ImageDataGenerator(rescale=1./255)
-        test_datagen = ImageDataGenerator(rescale=1./255)
-
-        train_data = train_datagen.flow_from_directory(
-            train_dir,
-            target_size=(224, 224),
-            batch_size=32,
-            class_mode='categorical'
-        )
-
-        test_data = test_datagen.flow_from_directory(
-            test_dir,
-            target_size=(224, 224),
-            batch_size=32,
-            class_mode='categorical'
-        )
-
-        # ---------- CNN Model ----------
-        model = Sequential([
-            tf.keras.layers.Input(shape=(224, 224, 3)),
-            Conv2D(10, 3, activation='relu'),
-            MaxPool2D(),
-            Conv2D(10, 3, activation='relu'),
-            MaxPool2D(),
-            Flatten(),
-            Dense(len(train_data.class_indices), activation='softmax')
-        ])
-
-        model.compile(
-            loss='categorical_crossentropy',
-            optimizer='adam',
-            metrics=['accuracy']
-        )
-
-        # ---------- Train the Model ----------
-        history = model.fit(
-            train_data,
-            epochs=5,
-            steps_per_epoch=len(train_data),
-            validation_data=test_data,
-            validation_steps=len(test_data)
-        )
-
-        # ---------- Save Model in New Format (.h5) ----------
-        os.makedirs("models", exist_ok=True)
-        model_save_path = os.path.join("models", "trained_model.h5")
-        model.save(model_save_path)
-
-        # ---------- Save Training Curve ----------
-        plot_path = os.path.join("models", "training_plot.png")
-        plot_loss_curves(history, plot_path)
-
-        # ---------- Context to HTML ----------
-        context = {
-            "accuracy": history.history['accuracy'][-1],
-            "val_accuracy": history.history['val_accuracy'][-1],
-            "loss": history.history['loss'][-1],
-            "val_loss": history.history['val_loss'][-1],
-            "plot_path": plot_path,
-            "model_path": model_save_path
-        }
-
-        return render(request, "users/training_result.html", context)
-
-    # Fallback to status page
-    return render(request, "users/training_status.html", {})
-
-
-
-import tensorflow as tf
-import numpy as np
-from django.shortcuts import render
-from django.core.files.storage import FileSystemStorage
-from tensorflow.keras.preprocessing import image
 
 
 # List of monument class names (must match training order)
@@ -230,66 +234,48 @@ class_names = [
 monument_info = {
     "Ajanta Caves": {
         "history": "The Ajanta Caves are 30 rock-cut Buddhist cave monuments in Maharashtra.",
-        "3d_model_url": "/static/ar_models/ajanta.glb",
         "map_location": "https://maps.google.com/?q=Ajanta+Caves"
     },
     "alai_darwaza": {
         "history": "Built in 1311, the Alai Darwaza is the southern gateway of the Quwwat-ul-Islam Mosque in Delhi.",
-        "3d_model_url": "/static/ar_models/alai_darwaza.glb",
         "map_location": "https://maps.google.com/?q=Alai+Darwaza"
     },
     "alai_minar": {
         "history": "An unfinished tower in the Qutb complex started by Alauddin Khalji.",
-        "3d_model_url": "/static/ar_models/alai_minar.glb",
         "map_location": "https://maps.google.com/?q=Alai+Minar"
     },
     "basilica_of_bom_jesus": {
         "history": "UNESCO World Heritage Site in Goa, holds the remains of St. Francis Xavier.",
-        "3d_model_url": "/static/ar_models/bom_jesus.glb",
         "map_location": "https://maps.google.com/?q=Basilica+of+Bom+Jesus"
     },
     "charminar": {
         "history": "Iconic 16th-century mosque in Hyderabad built by Muhammad Quli Qutb Shah.",
-        "3d_model_url": "/static/ar_models/charminar.glb",
         "map_location": "https://maps.google.com/?q=Charminar"
     },
     "Chhota_Imambara": {
         "history": "Historical monument in Lucknow built by Muhammad Ali Shah in 1838.",
-        "3d_model_url": "/static/ar_models/chhota_imambara.glb",
         "map_location": "https://maps.google.com/?q=Chhota+Imambara"
     },
     "golden_temple": {
         "history": "The holiest Gurdwara of Sikhism located in Amritsar.",
-        "3d_model_url": "/static/ar_models/golden_temple.glb",
         "map_location": "https://maps.google.com/?q=Golden+Temple"
     },
     "tajmahal": {
         "history": "Famous white marble mausoleum built by Shah Jahan in Agra.",
-        "3d_model_url": "/static/ar_models/tajmahal.glb",
         "map_location": "https://maps.google.com/?q=Taj+Mahal"
     },
     "tanjavur temple": {
         "history": "Known for its grand architecture, Brihadeeswarar Temple is a UNESCO World Heritage site.",
-        "3d_model_url": "/static/ar_models/tanjavur_temple.glb",
         "map_location": "https://maps.google.com/?q=Tanjavur+Temple"
     },
     "victoria memorial": {
         "history": "Large marble building in Kolkata, built in honor of Queen Victoria.",
-        "3d_model_url": "/static/ar_models/victoria_memorial.glb",
         "map_location": "https://maps.google.com/?q=Victoria+Memorial"
     },
 }
 
 
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
-from django.core.files.storage import FileSystemStorage
-import tensorflow as tf
-import numpy as np
-from tensorflow.keras.preprocessing import image
-import os
-from django.conf import settings as django_settings
+
 
 # Load the model ONCE at startup so each request doesn't reload it (fixes timeout)
 _MONUMENT_MODEL = None
@@ -297,7 +283,7 @@ _MONUMENT_MODEL = None
 def get_model():
     global _MONUMENT_MODEL
     if _MONUMENT_MODEL is None:
-        model_path = os.path.join(django_settings.BASE_DIR, 'models', 'trained_model.h5')
+        model_path = os.path.join(settings.BASE_DIR, 'models', 'trained_model.h5')
         _MONUMENT_MODEL = tf.keras.models.load_model(model_path, compile=False)
     return _MONUMENT_MODEL
 
@@ -338,7 +324,8 @@ def prediction(request):
             confidence = float(np.max(predictions[0])) * 100
 
             # Increased threshold for better reliability (e.g. to avoid false positives like Lotus Temple -> Taj Mahal)
-            THRESHOLD = 75
+            # --- RESTORED THRESHOLD FIX (75% -> 25%) ---
+            THRESHOLD = 25
 
             if confidence < THRESHOLD:
                 predicted_class = "Invalid Image"
@@ -401,15 +388,11 @@ def prediction(request):
 def api_predict(request):
 
     if request.method == 'POST' and 'monument_image' in request.FILES:
-
-        from django.conf import settings
-        import os
         model = get_model()
-
         uploaded_file = request.FILES['monument_image']
-        import tempfile
-        tmp_dir = tempfile.gettempdir()
-        fs = FileSystemStorage(location=tmp_dir, base_url='/tmp/')
+        
+        # Use simple FileSystemStorage for API
+        fs = FileSystemStorage()
         file_path = fs.save(uploaded_file.name, uploaded_file)
         full_path = fs.path(file_path)
 
@@ -422,7 +405,8 @@ def api_predict(request):
         predicted_index = np.argmax(predictions[0])
         confidence = float(np.max(predictions[0])) * 100
 
-        THRESHOLD = 75
+        # --- RESTORED THRESHOLD FIX (75% -> 25%) ---
+        THRESHOLD = 25
         if confidence < THRESHOLD:
             predicted_class = "Invalid Image"
             history = "This image does not belong to the trained monuments dataset."

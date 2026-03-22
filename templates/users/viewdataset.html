@@ -1,23 +1,109 @@
-{%extends 'users/userbase.html'%}
-{%block contents%}
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.css">
-<script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.js"></script>
-<script type="text/javascript">(document).ready(function(){('table').DataTable({
-    "pageLength": 50
-});});</script>
-        <div class="section-header">
-            <h2 class="section-title wow fadeInDown"> Dataset view :</h2>
-            <p class="wow fadeInDown"></p>
-        </div>
+{% extends 'users/userbase.html' %}
 
-        <div class="row" style="margin:10px ;">
-            
-            <pre>{{data|safe}}</pre>
+{% block contents %}
+<style>
+    .dataset-container {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 3rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        margin-top: 2rem;
+    }
 
+    .dataset-header {
+        margin-bottom: 2.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 1.5rem;
+    }
 
-        </div>
+    .dataset-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #10b981, #3b82f6);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
 
+    .dataset-subtitle {
+        color: #94a3b8;
+        font-size: 1.1rem;
+    }
 
+    .data-box {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 16px;
+        padding: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        overflow-x: auto;
+    }
 
-{%endblock%}
+    .data-content {
+        color: #e2e8f0;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        margin: 0;
+    }
+
+    /* Scrollbar for data box */
+    .data-box::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+    }
+    .data-box::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
+    .data-box::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+    .data-box::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .action-row {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1rem;
+    }
+
+    .back-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        padding: 0.8rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none !important;
+    }
+
+    .back-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="dataset-container fade-in-element">
+    <div class="dataset-header">
+        <h1 class="dataset-title">Dataset Analysis</h1>
+        <p class="dataset-subtitle">Processed records and feature distribution for MonumentAI</p>
+    </div>
+
+    <div class="data-box">
+        <pre class="data-content">{{ data|safe }}</pre>
+    </div>
+
+    <div class="action-row">
+        <a href="{% url 'UserHome' %}" class="back-btn">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

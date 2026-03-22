@@ -33,6 +33,7 @@ urlpatterns = [
     # path("AdminLoginCheck/", admins.AdminLoginCheck, name="AdminLoginCheck"),
     path('RegisterUsersView/', admins.RegisterUsersView, name='RegisterUsersView'),
     path('ActivaUsers/', admins.ActivaUsers, name='ActivaUsers'),
+    path('DeleteUser/', admins.DeleteUser, name='DeleteUser'),
     
 
     # User Views
@@ -41,8 +42,10 @@ urlpatterns = [
     path("UserLoginCheck/", usr.UserLoginCheck, name="UserLoginCheck"),
     path("UserHome/", usr.UserHome, name="UserHome"),
     path("training/", usr.training, name="training"),
+    path("training_progress/", usr.training_progress, name="training_progress"),
+    path("cancel_training/", usr.cancel_training, name="cancel_training"),
     path("prediction/", usr.prediction, name="prediction"),
-    path("terms/", usr.terms_of_service, name="terms_of_service"),
+    path("UserRegisterForm/terms/", usr.terms_of_service, name="terms_of_service"),
     path('api/predict/', usr.api_predict, name='api_predict'),
     
 ]

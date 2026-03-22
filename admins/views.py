@@ -42,3 +42,12 @@ def ActivaUsers(request):
         UserRegistrationModel.objects.filter(id=id).update(status=status)
         data = UserRegistrationModel.objects.all()
         return render(request,'admins/viewregisterusers.html',{'data':data})
+
+def DeleteUser(request):
+    uid = request.GET.get('uid')
+    try:
+        UserRegistrationModel.objects.filter(id=uid).delete()
+        messages.success(request, 'User deleted successfully')
+    except Exception as e:
+        messages.error(request, f'Error deleting user: {str(e)}')
+    return redirect('RegisterUsersView')

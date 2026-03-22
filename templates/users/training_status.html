@@ -75,42 +75,96 @@
     }
 
     .retrain-btn {
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        background: #1e293b;
         color: white;
-        border: none;
-        padding: 1.2rem 3rem;
-        font-size: 1.1rem;
-        font-weight: 700;
-        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.8rem 2.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 8px; /* rounded-md */
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        box-shadow: none !important;
     }
 
     .retrain-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 15px 30px -10px rgba(139, 92, 246, 0.5);
-        filter: brightness(1.1);
+        background: #334155;
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: none !important;
     }
 
-    .alert-error {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        color: #fca5a5;
-        padding: 1.5rem;
-        border-radius: 16px;
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(40px);
+        -webkit-backdrop-filter: blur(40px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .modal-box {
+        background: #0f172a; /* Same dark slate as website */
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 24px;
+        padding: 3rem;
+        max-width: 450px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8);
+    }
+
+    .modal-header-text {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
         margin-bottom: 2rem;
-        width: 100%;
-        max-width: 700px;
+    }
+
+    .status-msg-minimal {
+        color: #94a3b8;
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .cancel-btn-minimal {
+        background: transparent;
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        padding: 0.7rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s;
+        margin-top: 2rem;
+    }
+
+    .cancel-btn-minimal:hover {
+        background: rgba(239, 68, 68, 0.05);
+        border-color: #f87171;
+        text-decoration: none;
+        color: #f87171;
+    }
+
+    .cancel-success-overlay {
+        position: absolute;
+        inset: 0;
+        background: #0f172a;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border-radius: 24px;
+        z-index: 10;
     }
 </style>
 
 <div class="status-container fade-in-element">
-    
     {% if error %}
     <div class="alert-error">
         <h5 class="mb-2"><i class="fas fa-exclamation-triangle mr-2"></i> Training Error</h5>
@@ -118,45 +172,139 @@
     </div>
     {% endif %}
 
-    <div class="glass-status-card">
+    <div id="ready-card" class="glass-status-card">
         <div class="status-icon">
-            <i class="fas fa-check-double"></i>
+            <i class="fas fa-check-double text-success"></i>
         </div>
-        
-        <h2 class="status-title">Model is Already Trained</h2>
+        <h2 class="status-title">Model is Ready</h2>
         <p class="status-desc">
-            The Monument Identification model is currently optimized and deployed. It is ready to recognize monuments with high accuracy. Re-training is only necessary if you have added new data or want to update the architecture.
+            The Monument Identification model is currently optimized.
         </p>
 
         <div class="model-info-box">
             <div class="info-item">
                 <span class="info-label">Architecture</span>
-                <span class="info-value">{{ model_name|default:"Deep Learning CNN" }}</span>
+                <span class="info-value">MobileNetV2 Derivative</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Recognized Classes</span>
+                <span class="info-label">Classes</span>
                 <span class="info-value">{{ classes_count|default:"10" }} Monuments</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Current Status</span>
-                <span class="info-value text-success">Active & Optimal</span>
+                <span class="info-label">Status</span>
+                <span class="info-value text-success">Optimal</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Last Updated</span>
-                <span class="info-value">{{ last_modified|default:"Not available" }}</span>
+                <span class="info-label">Last Trained</span>
+                <span class="info-value">{{ last_modified|default:"Not yet trained" }}</span>
             </div>
         </div>
 
-        <form method="POST">
-            {% csrf_token %}
-            <button type="submit" class="retrain-btn">
-                <i class="fas fa-sync-alt"></i> Re-train Model Now
-            </button>
-        </form>
-        
-        <p class="mt-4" style="color: #64748b; font-size: 0.9rem;">
-            <i class="fas fa-info-circle mr-1"></i> Running re-train will overwrite the existing model metrics.
-        </p>
+        <button id="start-btn" class="retrain-btn">
+            <i class="fas fa-sync-alt"></i> Re-train Model
+        </button>
     </div>
 </div>
+
+<!-- Training Progress Modal (THE "BOX") -->
+<div id="training-modal" class="modal-overlay" data-running="{% if is_running %}true{% else %}false{% endif %}">
+    <div class="modal-box position-relative">
+        <div id="cancel-success-overlay" class="cancel-success-overlay">
+            <i class="fas fa-check-circle text-success mb-3" style="font-size: 2.5rem;"></i>
+            <h4 class="text-white">Stopped</h4>
+        </div>
+
+        <div class="modal-header-text">Status of Training</div>
+        
+        <p id="status-msg" class="status-msg-minimal">Initializing Neural Engine...</p>
+
+        <div class="progress-wrapper mb-3" style="background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; height: 6px;">
+            <div id="progress-bar" style="width: 5%; height: 100%; background: #3b82f6;"></div>
+        </div>
+
+        <div class="d-flex justify-content-between mb-2">
+            <span id="epoch-display" style="color: white; font-size: 0.9rem; font-weight: 500;">Epoch 1/5</span>
+            <span id="acc-display" style="color: #10b981; font-size: 0.9rem; font-weight: 500;">Acc 30%</span>
+        </div>
+
+        <button id="cancel-btn" class="cancel-btn-minimal">
+            Cancel Model
+        </button>
+    </div>
+</div>
+
+<script>
+    const trainingModal = document.getElementById('training-modal');
+    const startBtn = document.getElementById('start-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const statusMsg = document.getElementById('status-msg');
+    const progressBar = document.getElementById('progress-bar');
+    const epochDisplay = document.getElementById('epoch-display');
+    const accDisplay = document.getElementById('acc-display');
+
+    let pollInterval = null;
+
+    function startPolling() {
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(() => {
+            fetch('/training_progress/')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.is_running) {
+                        trainingModal.style.display = 'flex';
+                        statusMsg.innerText = data.message;
+                        epochDisplay.innerText = `Epoch ${data.current_epoch}/${data.total_epochs}`;
+                        // Data.accuracy already includes % or is just number? 
+                        // Let's ensure only one % exists.
+                        let acc = data.accuracy.toString().replace('%', '');
+                        accDisplay.innerText = `Acc ${acc}%`;
+
+                        let current = parseInt(data.current_epoch);
+                        let total = parseInt(data.total_epochs);
+                        let p = (current === 0) ? 5 : ((current - 1) / total) * 100;
+                        if (parseFloat(data.accuracy) > 0) p += (1 / total) * 50;
+                        
+                        progressBar.style.width = Math.min(p, 100) + '%';
+                    } else {
+                        if (data.message === "Training Success") {
+                            progressBar.style.width = '100%';
+                            statusMsg.innerText = "Training Completed Successfully!";
+                            setTimeout(() => { window.location.href = "{% url 'UserHome' %}"; }, 1500);
+                        } else if (data.is_cancelled || data.message.includes("Cancelled")) {
+                            document.getElementById('cancel-success-overlay').style.display = 'flex';
+                            setTimeout(() => { location.reload(); }, 2000);
+                        } else {
+                            trainingModal.style.display = 'none';
+                        }
+                        clearInterval(pollInterval);
+                    }
+                });
+        }, 1500);
+    }
+
+    startBtn.onclick = () => {
+        if (!confirm("⚠️ CAUTION: Start re-training? Current model weights will be reset. Process starts at Epoch 0 with 30% baseline accuracy.")) return;
+        
+        trainingModal.style.display = 'flex';
+        fetch('{% url "training" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        }).then(res => startPolling());
+    };
+
+    cancelBtn.onclick = () => {
+        if (confirm("⚠️ CAUTION: Stop training now? The current epoch will finish before the process terminates.")) {
+            fetch('/cancel_training/').then(() => {
+                cancelBtn.disabled = true;
+                cancelBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Stopping...';
+            });
+        }
+    };
+
+    // Resume polling if already running
+    if (trainingModal.getAttribute('data-running') === 'true') {
+        trainingModal.style.display = 'flex';
+        startPolling();
+    }
+</script>
 {% endblock %}

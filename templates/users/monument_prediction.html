@@ -344,20 +344,6 @@
                 </div>
             </div>
 
-            <!-- 3D Model AR Viewer -->
-            {% if model_3d %}
-            <div class="model-container">
-                <h4 class="text-white text-center mb-3" style="font-family:'Outfit'">Interactive 3D View</h4>
-                <model-viewer 
-                    src="{{ model_3d }}" 
-                    alt="3D model of {{ predicted_class }}"
-                    auto-rotate 
-                    camera-controls 
-                    ar>
-                </model-viewer>
-            </div>
-            {% endif %}
-
         </div>
     {% endif %}
 

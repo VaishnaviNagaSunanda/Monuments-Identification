@@ -157,6 +157,62 @@
             .navbar-brand span { display: none; } /* Hide text, keep icon if narrow */
             .auth-card { padding: 1.5rem !important; }
         }
+
+        /* Premium Footer Styles */
+        .glass-footer {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 3rem 0;
+            margin-top: auto;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1.5rem;
+        }
+
+        .footer-brand {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .footer-brand p {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .footer-links a {
+            color: #e2e8f0;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: #3b82f6;
+        }
+
+        .footer-copy {
+            color: #64748b;
+            font-size: 0.85rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            width: 100%;
+            max-width: 600px;
+        }
     </style>
 </head>
 <body>
@@ -192,6 +248,25 @@
         {% block contents %}
         {% endblock %}
     </div>
+
+    <footer class="glass-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <i class="fas fa-landmark"></i> MonumentAI
+                    <p>Advanced Identification through Deep Learning</p>
+                </div>
+                <div class="footer-links">
+                    <a href="{% url 'index' %}">Home</a>
+                    <a href="{% url 'terms_of_service' %}">Terms & Privacy</a>
+                    <a href="#">Contact</a>
+                </div>
+                <div class="footer-copy">
+                    &copy; 2026 Vaishnavi Naga Sunanda Parasa. All Rights Reserved.
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
