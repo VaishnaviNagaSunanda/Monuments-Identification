@@ -1,9 +1,33 @@
 import os
+import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPool2D, Flatten, Dense
+
+def plot_loss_curves(history, save_path):
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    accuracy = history.history['accuracy']
+    val_accuracy = history.history['val_accuracy']
+    epochs = range(len(loss))
+
+    plt.figure(figsize=(10,4))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, loss, label='Training Loss')
+    plt.plot(epochs, val_loss, label='Validation Loss')
+    plt.legend()
+    plt.title('Loss')
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, accuracy, label='Training Accuracy')
+    plt.plot(epochs, val_accuracy, label='Validation Accuracy')
+    plt.legend()
+    plt.title('Accuracy')
+
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
 
 # ---------- Dataset Paths ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,99 +37,57 @@ test_dir  = os.path.join(BASE_DIR, "media", "Indian-monuments", "images", "test"
 print(f"Training data path: {train_dir}")
 print(f"Testing data path: {test_dir}")
 
-# ---------- Data Augmentation (improves accuracy) ----------
-train_datagen = ImageDataGenerator(
-    rescale=1./255,
-    rotation_range=20,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    horizontal_flip=True,
-    zoom_range=0.2,
-)
+# ---------- Data Generators ----------
+train_datagen = ImageDataGenerator(rescale=1./255)
 test_datagen = ImageDataGenerator(rescale=1./255)
-
-IMAGE_SIZE = (224, 224)  # MobileNetV2 works best at 224x224
 
 train_data = train_datagen.flow_from_directory(
     train_dir,
-    target_size=IMAGE_SIZE,
+    target_size=(300, 300),
     batch_size=32,
     class_mode='categorical'
 )
 
 test_data = test_datagen.flow_from_directory(
     test_dir,
-    target_size=IMAGE_SIZE,
+    target_size=(300, 300),
     batch_size=32,
     class_mode='categorical'
 )
 
-num_classes = len(train_data.class_indices)
-print(f"Number of monument classes: {num_classes}")
-print(f"Classes: {list(train_data.class_indices.keys())}")
-
-# ---------- MobileNetV2 Transfer Learning Model ----------
-# Uses weights pre-trained on 1.2 million ImageNet images
-base_model = MobileNetV2(
-    input_shape=(224, 224, 3),
-    include_top=False,          # Remove the ImageNet classifier head
-    weights='imagenet'          # Use pre-trained weights
-)
-
-# Freeze the base model layers (keep ImageNet features)
-base_model.trainable = False
-
-# Add our custom classification head
-x = base_model.output
-x = GlobalAveragePooling2D()(x)
-x = Dropout(0.3)(x)
-x = Dense(128, activation='relu')(x)
-x = Dropout(0.2)(x)
-predictions = Dense(num_classes, activation='softmax')(x)
-
-model = Model(inputs=base_model.input, outputs=predictions)
+# ---------- CNN Model ----------
+model = Sequential([
+    tf.keras.layers.Input(shape=(300, 300, 3)),
+    Conv2D(10, 3, activation='relu'),
+    MaxPool2D(),
+    Conv2D(10, 3, activation='relu'),
+    MaxPool2D(),
+    Flatten(),
+    Dense(len(train_data.class_indices), activation='softmax')
+])
 
 model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
     loss='categorical_crossentropy',
+    optimizer='adam',
     metrics=['accuracy']
 )
 
-print(f"Model parameters: {model.count_params():,}")
-
-# ---------- Phase 1: Train only the new head (5 epochs) ----------
-print("\n=== Phase 1: Training classification head ===")
-history1 = model.fit(
+# ---------- Train the Model ----------
+history = model.fit(
     train_data,
     epochs=5,
+    steps_per_epoch=len(train_data),
     validation_data=test_data,
+    validation_steps=len(test_data)
 )
 
-# ---------- Phase 2: Fine-tune the top layers of MobileNetV2 ----------
-print("\n=== Phase 2: Fine-tuning top MobileNetV2 layers ===")
-base_model.trainable = True
-
-# Only fine-tune the last 30 layers
-for layer in base_model.layers[:-30]:
-    layer.trainable = False
-
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),  # Lower LR for fine-tuning
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
-
-history2 = model.fit(
-    train_data,
-    epochs=5,
-    validation_data=test_data,
-)
-
-final_acc = history2.history['val_accuracy'][-1]
-print(f"\nFinal validation accuracy: {final_acc:.2%}")
-
-# ---------- Save model as .h5 for cross-Keras compatibility ----------
+# ---------- Save Model ----------
 os.makedirs("models", exist_ok=True)
-model_save_path = os.path.join("models", "trained_model.h5")
+model_save_path = os.path.join("models", "trained_model.keras")
 model.save(model_save_path)
 print(f"Model saved to {model_save_path}")
+
+# ---------- Save Training Curve ----------
+plot_path = os.path.join("models", "training_plot.png")
+plot_loss_curves(history, plot_path)
+print(f"Plot saved to {plot_path}")

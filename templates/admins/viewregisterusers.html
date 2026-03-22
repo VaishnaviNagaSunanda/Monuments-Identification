@@ -1,179 +1,46 @@
 {% extends 'admins/adminbase.html'%}
-{% block contents %}
-<style>
-    .table-container {
-        background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 24px;
-        padding: 2.5rem;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        margin-top: 1rem;
-    }
+{%block contents%}
 
-    .table-title {
-        font-family: 'Outfit', sans-serif;
-        font-size: 2rem;
-        font-weight: 700;
-        color: white;
-        margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
+ <section id="intro">
 
-    .table-title i {
-        color: #10b981;
-    }
+    <div class="intro-text">
 
-    .custom-table {
-        width: 100%;
-        color: #e2e8f0;
-        border-collapse: separate;
-        border-spacing: 0 8px;
-    }
+      <p><h2 align="center" style="font-weight:bold;">View RegisterUser Details</h2></p>
+      <table class="table table-bordered bg-light text-dark">
+    <thead style="color:brown;">
+      <tr>
+        <th>S.No</th>
+        <th>Name</th>
+        <th>Login ID</th>
+        <th>Mobile</th>
+        <th>Email</th>
+        <th>Locality</th>
+        <th>Status</th>
+        <th>Activate</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for i in data %}
+                                            <tr style="color: Black">
+                                                <td>{{forloop.counter}}</td>
+                                                <td>{{i.name}}</td>
+                                                <td>{{i.loginid}}</td>
+                                                <td>{{i.mobile}}</td>
+                                                <td>{{i.email}}</td>
+                                                <td>{{i.locality}}</td>
+                                                <td>{{i.status}}</td>
 
-    .custom-table th {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 1.2rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        letter-spacing: 1px;
-        color: #10b981;
-        border: none;
-    }
+                                                {% if i.status == 'waiting' %}
+                                                <td><a class="btn-link" href="/ActivaUsers/?uid={{ i.id }}"
+                                                       style="color:DARKBLUE">Activate</a></td>
+                                                {% else %}
+                                                <td> Activated</td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
 
-    .custom-table tr {
-        background: rgba(255, 255, 255, 0.02);
-        transition: all 0.3s ease;
-    }
-
-    .custom-table tr:hover {
-        background: rgba(255, 255, 255, 0.08);
-        transform: scale(1.01);
-    }
-
-    .custom-table td {
-        padding: 1.2rem;
-        border: none;
-        vertical-align: middle;
-    }
-
-    .status-badge {
-        padding: 0.4rem 0.8rem;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-transform: capitalize;
-    }
-
-    .status-active {
-        background: rgba(16, 185, 129, 0.15);
-        color: #34d399;
-    }
-
-    .status-waiting {
-        background: rgba(245, 158, 11, 0.15);
-        color: #fbbf24;
-    }
-
-    .activate-btn {
-        background: #10b981;
-        color: white !important;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-weight: 600;
-        text-decoration: none !important;
-        transition: all 0.3s ease;
-        display: inline-block;
-    }
-
-    .activate-btn:hover {
-        background: #059669;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    }
-
-    .activated-text {
-        color: #94a3b8;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-</style>
-
-<div class="table-container fade-in-element">
-    <h2 class="table-title"><i class="fas fa-users-cog"></i> Registered Users</h2>
-    
-    <div class="table-container fade-in-element">
-        <div class="table-responsive">
-            <table class="table custom-table">
-                <thead>
-                    <tr>
-                        <th>S.No</th>
-                        <th>User Details</th>
-                        <th>Contact</th>
-                        <th>City / Locality</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-            <tbody>
-                {% for i in data %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>
-                        <div style="font-weight: 600; color: white;">{{ i.name }}</div>
-                        <div style="font-size: 0.85rem; color: #94a3b8;">ID: {{ i.loginid }}</div>
-                    </td>
-                    <td>
-                        <div><i class="fas fa-envelope mr-1" style="font-size: 0.8rem;"></i> {{ i.email }}</div>
-                        <div><i class="fas fa-phone mr-1" style="font-size: 0.8rem;"></i> {{ i.mobile }}</div>
-                    </td>
-                    <td>
-                        <div style="color: #60a5fa; font-weight: 500;">{{ i.city }}</div>
-                        <div style="font-size: 0.85rem; color: #94a3b8;">{{ i.locality|default:"-" }}</div>
-                    </td>
-                    <td>
-                        <span class="status-badge {% if i.status == 'waiting' %}status-waiting{% else %}status-active{% endif %}">
-                            {{ i.status }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if i.status == 'waiting' %}
-                            <a class="activate-btn" href="/ActivaUsers/?uid={{ i.id }}">
-                                <i class="fas fa-user-check mr-1"></i> Activate
-                            </a>
-                        {% else %}
-                            <span class="activated-text">
-                                <i class="fas fa-check-circle text-success"></i> Verified
-                            </span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            </table>
-        </div>
+    </tbody>
+  </table>
     </div>
-</div>
-
-<style>
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
-    @media (max-width: 768px) {
-        .table-container { padding: 1rem; }
-        .custom-table th, .custom-table td {
-            min-width: 150px;
-            font-size: 0.85rem;
-        }
-        .header-section { margin-bottom: 1.5rem; }
-        .header-title { font-size: 1.8rem; }
-    }
-</style>
-{% endblock %}
+  </section>
+{%endblock%}

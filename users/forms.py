@@ -12,12 +12,16 @@ class UserRegistrationForm(forms.ModelForm):
                              max_length=100)
     email = forms.CharField(widget=forms.TextInput(attrs={'pattern': '[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$'}),
                             required=True, max_length=100)
+    locality = forms.CharField(widget=forms.TextInput(), required=True, max_length=100)
+    address = forms.CharField(widget=forms.Textarea(attrs={'rows': 4, 'cols': 22}), required=True, max_length=250)
     city = forms.CharField(widget=forms.TextInput(
         attrs={'autocomplete': 'off', 'pattern': '[A-Za-z ]+', 'title': 'Enter Characters Only '}), required=True,
         max_length=100)
-    confirm_password = forms.CharField(widget=forms.PasswordInput(), required=True, max_length=100)
+    state = forms.CharField(widget=forms.TextInput(
+        attrs={'autocomplete': 'off', 'pattern': '[A-Za-z ]+', 'title': 'Enter Characters Only '}), required=True,
+        max_length=100)
     status = forms.CharField(widget=forms.HiddenInput(), initial='waiting', max_length=100)
 
     class Meta():
         model = UserRegistrationModel
-        fields = ('name', 'loginid', 'password', 'mobile', 'email', 'city', 'status')
+        fields = '__all__'

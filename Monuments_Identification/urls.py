@@ -42,7 +42,6 @@ urlpatterns = [
     path("UserHome/", usr.UserHome, name="UserHome"),
     path("training/", usr.training, name="training"),
     path("prediction/", usr.prediction, name="prediction"),
-    path("terms/", usr.terms_of_service, name="terms_of_service"),
     path('api/predict/', usr.api_predict, name='api_predict'),
     
 ]
