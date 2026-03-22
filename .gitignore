@@ -31,3 +31,17 @@ __pycache__/
 .idea/
 .DS_Store
 *.swp
+
+
+
+
+#images
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.avif
+*.woff
+*.woff2
+*.ttf
+*.eot
