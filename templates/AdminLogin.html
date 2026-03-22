@@ -3,234 +3,285 @@
 
 {% block contents %}
 <style>
-    /* Custom Styles for Admin Login Form */
-    .admin-section {
-        background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80') no-repeat center center;
-        background-size: cover;
-        min-height: 100vh;
+    .auth-container {
         display: flex;
-        align-items: center;
         justify-content: center;
+        align-items: center;
+        min-height: calc(100vh - 120px);
         padding: 2rem 0;
     }
 
-    .admin-card {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    .auth-card {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         padding: 3rem;
-        max-width: 400px;
+        max-width: 450px;
         width: 100%;
-        backdrop-filter: blur(10px);
-        animation: slideInUp 1s ease-out;
         position: relative;
         overflow: hidden;
     }
 
-    .admin-card::before {
+    /* Decorative top accent */
+    .auth-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
-        right: 0;
-        height: 5px;
-        background: linear-gradient(to right, #FF5733, #FFBD33, #33FF57, #3357FF);
+        width: 100%;
+        height: 6px;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
     }
 
-    .admin-title {
-        font-family: 'Playfair Display', serif;
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-title {
+        font-family: 'Outfit', sans-serif;
         font-size: 2.2rem;
         font-weight: 700;
-        color: #333;
-        text-align: center;
+        color: white;
+        margin-bottom: 0.5rem;
+    }
+    
+    .auth-subtitle {
+        color: #94a3b8;
+        font-size: 0.95rem;
+    }
+
+    /* Toggle Switch */
+    .toggle-container {
+        display: flex;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 0.3rem;
         margin-bottom: 2rem;
         position: relative;
     }
 
-    .admin-title::after {
-        content: '';
+    .toggle-btn {
+        flex: 1;
+        text-align: center;
+        padding: 0.8rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 2;
+        border-radius: 10px;
+    }
+
+    .toggle-btn.active {
+        color: white;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        top: 0.3rem;
+        left: 0.3rem;
+        width: calc(50% - 0.3rem);
+        height: calc(100% - 0.6rem);
+        background: linear-gradient(135deg, #3b82f6, #6366f1);
+        border-radius: 10px;
+        transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        z-index: 1;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    /* Forms */
+    .auth-form {
+        display: none;
+        animation: fadeIn 0.4s ease forwards;
+    }
+
+    .auth-form.active {
         display: block;
-        width: 60px;
-        height: 3px;
-        background: linear-gradient(to right, #FF5733, #FFBD33);
-        margin: 0.5rem auto;
-        border-radius: 2px;
     }
 
     .form-group {
         margin-bottom: 1.5rem;
-        position: relative;
     }
 
-    .form-group input {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 2px solid #e0e0e0;
-        border-radius: 10px;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-        background: rgba(255, 255, 255, 0.8);
-    }
-
-    .form-group input:focus {
-        outline: none;
-        border-color: #3357FF;
-        box-shadow: 0 0 0 3px rgba(51, 87, 255, 0.1);
-        transform: translateY(-2px);
-    }
-
-    .form-group input:hover {
-        border-color: #FFBD33;
-    }
-
-    .btn-group {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
-    }
-
-    .admin-btn {
-        flex: 1;
-        padding: 1rem;
-        border: none;
-        border-radius: 10px;
-        color: white;
-        font-size: 1rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .admin-btn-primary {
-        background: linear-gradient(to right, #FF5733, #FFBD33);
-    }
-
-    .admin-btn-primary:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(255, 87, 51, 0.4);
-        color: white;
-    }
-
-    .admin-btn-secondary {
-        background: linear-gradient(to right, #6c757d, #5a6268);
-    }
-
-    .admin-btn-secondary:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(108, 117, 125, 0.4);
-        color: white;
-    }
-
-    .messages {
-        margin-top: 1rem;
-        padding: 1rem;
-        border-radius: 10px;
-        text-align: center;
+    .form-label {
+        display: block;
+        color: #e2e8f0;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
         font-weight: 500;
     }
 
-    .messages.success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
+    .form-control {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        color: white;
+        font-size: 1rem;
+        transition: all 0.3s ease;
     }
 
-    .messages.error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
+    .form-control:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
     }
 
-    /* Animations */
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(50px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .form-control::placeholder {
+        color: #64748b;
     }
 
-    .form-group {
-        opacity: 0;
-        animation: fadeInUp 0.6s ease-out forwards;
+    .submit-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #3b82f6, #6366f1);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 1rem;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+        box-shadow: 0 10px 20px -10px rgba(59, 130, 246, 0.5);
     }
 
-    .form-group:nth-child(1) { animation-delay: 0.1s; }
-    .form-group:nth-child(2) { animation-delay: 0.2s; }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 25px -10px rgba(59, 130, 246, 0.7);
     }
 
-    /* Rumor Icon */
-    .rumor-icon {
-        font-size: 3rem;
-        color: #FF5733;
+    .auth-footer {
         text-align: center;
-        margin-bottom: 1rem;
+        margin-top: 1.5rem;
+        font-size: 0.9rem;
+        color: #94a3b8;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-        .admin-card {
-            padding: 2rem;
-            margin: 1rem;
-        }
-        .admin-title {
-            font-size: 1.8rem;
-        }
-        .btn-group {
-            flex-direction: column;
-        }
+    .auth-footer a {
+        color: #60a5fa;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s;
+    }
+
+    .auth-footer a:hover {
+        color: #93c5fd;
+    }
+
+    /* Messages */
+    .messages-container {
+        margin-bottom: 1.5rem;
+    }
+    .msg-alert {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+        text-align: center;
+        border: 1px solid;
+    }
+    .msg-alert.success {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.3);
+        color: #34d399;
+    }
+    .msg-alert.error {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.3);
+        color: #f87171;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 </style>
 
-<section class="admin-section">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-12 col-md-8 col-lg-6">
-                <div class="admin-card">
-                    <div class="rumor-icon">🔍</div> <!-- Icon for identification/search -->
-                    <h1 class="admin-title">Admin Login</h1>
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="form-group">
-                            <input type="text" class="form-control" name="login_id" placeholder="Enter Login ID" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <input type="password" class="form-control" name="password" placeholder="Enter Password" required>
-                        </div>
-                        
-                        <div class="btn-group">
-                            <button type="submit" class="admin-btn admin-btn-primary">Login</button>
-                            <button type="reset" class="admin-btn admin-btn-secondary">Reset</button>
-                        </div>
-                    </form>
-                    
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="messages {% if message.tags == 'success' %}success{% else %}error{% endif %}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
+<div class="auth-container fade-in-element">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1 class="auth-title">Welcome Back</h1>
+            <p class="auth-subtitle">Sign in to your account</p>
         </div>
+
+        {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="msg-alert {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+                    <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %} mr-2"></i> {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="toggle-container">
+            <div class="toggle-slider" id="toggleSlider" style="transform: translateX(100%);"></div>
+            <div class="toggle-btn" id="btnUser" onclick="switchTab('user')">User Login</div>
+            <div class="toggle-btn active" id="btnAdmin" onclick="switchTab('admin')">Admin Login</div>
+        </div>
+
+        <!-- User Login Form -->
+        <form id="formUser" class="auth-form" action="{% url 'UserLoginCheck' %}" method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Login ID</label>
+                <input type="text" class="form-control" name="loginid" required placeholder="Enter Login ID">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" name="pswd" required placeholder="Enter Password">
+            </div>
+            <button class="submit-btn" type="submit">Sign In as User</button>
+            <div class="auth-footer">
+                Don't have an account? <a href="{% url 'UserRegisterForm' %}">Register now</a>
+            </div>
+        </form>
+
+        <!-- Admin Login Form -->
+        <form id="formAdmin" class="auth-form active" action="{% url 'AdminLogin' %}" method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Admin ID</label>
+                <input type="text" class="form-control" name="login_id" required placeholder="Enter Admin ID">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" name="password" required placeholder="Enter Admin Password">
+            </div>
+            <button class="submit-btn" type="submit">Sign In as Admin</button>
+        </form>
     </div>
-</section>
+</div>
+
+<script>
+    function switchTab(type) {
+        const slider = document.getElementById('toggleSlider');
+        const btnUser = document.getElementById('btnUser');
+        const btnAdmin = document.getElementById('btnAdmin');
+        const formUser = document.getElementById('formUser');
+        const formAdmin = document.getElementById('formAdmin');
+
+        if (type === 'user') {
+            slider.style.transform = 'translateX(0)';
+            btnUser.classList.add('active');
+            btnAdmin.classList.remove('active');
+            formUser.classList.add('active');
+            formAdmin.classList.remove('active');
+        } else {
+            slider.style.transform = 'translateX(100%)';
+            btnAdmin.classList.add('active');
+            btnUser.classList.remove('active');
+            formAdmin.classList.add('active');
+            formUser.classList.remove('active');
+        }
+    }
+</script>
 {% endblock %}

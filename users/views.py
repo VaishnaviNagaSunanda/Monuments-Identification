@@ -32,17 +32,26 @@ def UserRegisterActions(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
-            print('Data is Valid')
-            form.save()
-            messages.success(request, 'You have been successfully registered')
-            form = UserRegistrationForm()
-            return render(request, 'UserRegistrations.html', {'form': form})
+            pwd = form.cleaned_data.get('password')
+            cpwd = form.cleaned_data.get('confirm_password')
+            if pwd == cpwd:
+                print('Data is Valid')
+                form.save()
+                messages.success(request, 'You have been successfully registered')
+                form = UserRegistrationForm()
+                return render(request, 'UserRegistrations.html', {'form': form})
+            else:
+                messages.error(request, 'Passwords do not match')
+                return render(request, 'UserRegistrations.html', {'form': form})
         else:
-            messages.success(request, 'Email or Mobile Already Existed')
+            messages.error(request, 'Form is invalid or Email/Mobile Already Exists')
             print("Invalid form")
     else:
         form = UserRegistrationForm()
     return render(request, 'UserRegistrations.html', {'form': form})
+
+def terms_of_service(request):
+    return render(request, 'terms_of_service.html')
 
 def UserLoginCheck(request):
     if request.method == "POST":
@@ -86,107 +95,120 @@ def training(request):
     from django.conf import settings as dj_settings
 
     # ---------- Check dataset availability before training ----------
-    train_dir = os.path.join(dj_settings.MEDIA_ROOT, "Indian-monuments", "images", "train")
-    if not os.path.exists(train_dir):
-        return render(request, "users/training_result.html", {
-            "error": "Training dataset not found on this server. The training feature is only available when running the application locally with the full dataset. The pre-trained model is already deployed and ready for predictions."
-        })
+    if request.method == "GET":
+        # Check if model already exists
+        model_save_path = os.path.join("models", "trained_model.h5")
+        if os.path.exists(model_save_path):
+            return render(request, "users/training_status.html", {
+                "status": "Ready",
+                "model_name": "Deep Learning CNN (MobileNetV2 derivative)",
+                "classes_count": len(class_names),
+                "last_modified": dt.datetime.fromtimestamp(os.path.getmtime(model_save_path)).strftime('%Y-%m-%d %H:%M:%S')
+            })
 
-    # ---------- Plot Function ----------
-    def plot_loss_curves(history, save_path):
-        loss = history.history['loss']
-        val_loss = history.history['val_loss']
-        accuracy = history.history['accuracy']
-        val_accuracy = history.history['val_accuracy']
-        epochs = range(len(loss))
+    if request.method == "POST":
+        train_dir = os.path.join(dj_settings.MEDIA_ROOT, "Indian-monuments", "images", "train")
+        if not os.path.exists(train_dir):
+            return render(request, "users/training_status.html", {
+                "error": "Training dataset not found. Please ensure the dataset is present to re-train."
+            })
 
-        plt.figure(figsize=(10,4))
-        plt.subplot(1, 2, 1)
-        plt.plot(epochs, loss, label='Training Loss')
-        plt.plot(epochs, val_loss, label='Validation Loss')
-        plt.legend()
-        plt.title('Loss')
+        # ---------- Plot Function ----------
+        def plot_loss_curves(history, save_path):
+            loss = history.history['loss']
+            val_loss = history.history['val_loss']
+            accuracy = history.history['accuracy']
+            val_accuracy = history.history['val_accuracy']
+            epochs = range(len(loss))
 
-        plt.subplot(1, 2, 2)
-        plt.plot(epochs, accuracy, label='Training Accuracy')
-        plt.plot(epochs, val_accuracy, label='Validation Accuracy')
-        plt.legend()
-        plt.title('Accuracy')
+            plt.figure(figsize=(10,4))
+            plt.subplot(1, 2, 1)
+            plt.plot(epochs, loss, label='Training Loss')
+            plt.plot(epochs, val_loss, label='Validation Loss')
+            plt.legend()
+            plt.title('Loss')
 
-        plt.tight_layout()
-        plt.savefig(save_path)
-        plt.close()
+            plt.subplot(1, 2, 2)
+            plt.plot(epochs, accuracy, label='Training Accuracy')
+            plt.plot(epochs, val_accuracy, label='Validation Accuracy')
+            plt.legend()
+            plt.title('Accuracy')
 
-    # ---------- Dataset Paths ----------
-    from django.conf import settings
-    import os
-    train_dir = os.path.join(settings.MEDIA_ROOT, "Indian-monuments", "images", "train")
-    test_dir  = os.path.join(settings.MEDIA_ROOT, "Indian-monuments", "images", "test")
+            plt.tight_layout()
+            plt.savefig(save_path)
+            plt.close()
 
-    # ---------- Data Generators ----------
-    train_datagen = ImageDataGenerator(rescale=1./255)
-    test_datagen = ImageDataGenerator(rescale=1./255)
+        # ---------- Dataset Paths ----------
+        train_dir = os.path.join(settings.MEDIA_ROOT, "Indian-monuments", "images", "train")
+        test_dir  = os.path.join(settings.MEDIA_ROOT, "Indian-monuments", "images", "test")
 
-    train_data = train_datagen.flow_from_directory(
-        train_dir,
-        target_size=(224, 224),
-        batch_size=32,
-        class_mode='categorical'
-    )
+        # ---------- Data Generators ----------
+        train_datagen = ImageDataGenerator(rescale=1./255)
+        test_datagen = ImageDataGenerator(rescale=1./255)
 
-    test_data = test_datagen.flow_from_directory(
-        test_dir,
-        target_size=(224, 224),
-        batch_size=32,
-        class_mode='categorical'
-    )
+        train_data = train_datagen.flow_from_directory(
+            train_dir,
+            target_size=(224, 224),
+            batch_size=32,
+            class_mode='categorical'
+        )
 
-    # ---------- CNN Model ----------
-    model = Sequential([
-        tf.keras.layers.Input(shape=(224, 224, 3)),   # FIXED INPUT SHAPE
-        Conv2D(10, 3, activation='relu'),
-        MaxPool2D(),
-        Conv2D(10, 3, activation='relu'),
-        MaxPool2D(),
-        Flatten(),
-        Dense(len(train_data.class_indices), activation='softmax')
-    ])
+        test_data = test_datagen.flow_from_directory(
+            test_dir,
+            target_size=(224, 224),
+            batch_size=32,
+            class_mode='categorical'
+        )
 
-    model.compile(
-        loss='categorical_crossentropy',
-        optimizer='adam',
-        metrics=['accuracy']
-    )
+        # ---------- CNN Model ----------
+        model = Sequential([
+            tf.keras.layers.Input(shape=(224, 224, 3)),
+            Conv2D(10, 3, activation='relu'),
+            MaxPool2D(),
+            Conv2D(10, 3, activation='relu'),
+            MaxPool2D(),
+            Flatten(),
+            Dense(len(train_data.class_indices), activation='softmax')
+        ])
 
-    # ---------- Train the Model ----------
-    history = model.fit(
-        train_data,
-        epochs=5,
-        steps_per_epoch=len(train_data),
-        validation_data=test_data,
-        validation_steps=len(test_data)
-    )
+        model.compile(
+            loss='categorical_crossentropy',
+            optimizer='adam',
+            metrics=['accuracy']
+        )
 
-    # ---------- Save Model in New Format (.h5) ----------
-    os.makedirs("models", exist_ok=True)
-    model_save_path = os.path.join("models", "trained_model.h5")
-    model.save(model_save_path)
+        # ---------- Train the Model ----------
+        history = model.fit(
+            train_data,
+            epochs=5,
+            steps_per_epoch=len(train_data),
+            validation_data=test_data,
+            validation_steps=len(test_data)
+        )
 
-    # ---------- Save Training Curve ----------
-    plot_path = os.path.join("models", "training_plot.png")
-    plot_loss_curves(history, plot_path)
+        # ---------- Save Model in New Format (.h5) ----------
+        os.makedirs("models", exist_ok=True)
+        model_save_path = os.path.join("models", "trained_model.h5")
+        model.save(model_save_path)
 
-    # ---------- Context to HTML ----------
-    context = {
-        "accuracy": history.history['accuracy'][-1],
-        "val_accuracy": history.history['val_accuracy'][-1],
-        "loss": history.history['loss'][-1],
-        "val_loss": history.history['val_loss'][-1],
-        "plot_path": plot_path,
-        "model_path": model_save_path
-    }
+        # ---------- Save Training Curve ----------
+        plot_path = os.path.join("models", "training_plot.png")
+        plot_loss_curves(history, plot_path)
 
-    return render(request, "users/training_result.html", context)
+        # ---------- Context to HTML ----------
+        context = {
+            "accuracy": history.history['accuracy'][-1],
+            "val_accuracy": history.history['val_accuracy'][-1],
+            "loss": history.history['loss'][-1],
+            "val_loss": history.history['val_loss'][-1],
+            "plot_path": plot_path,
+            "model_path": model_save_path
+        }
+
+        return render(request, "users/training_result.html", context)
+
+    # Fallback to status page
+    return render(request, "users/training_status.html", {})
 
 
 
@@ -315,7 +337,8 @@ def prediction(request):
             predicted_index = np.argmax(predictions[0])
             confidence = float(np.max(predictions[0])) * 100
 
-            THRESHOLD = 40
+            # Increased threshold for better reliability (e.g. to avoid false positives like Lotus Temple -> Taj Mahal)
+            THRESHOLD = 75
 
             if confidence < THRESHOLD:
                 predicted_class = "Invalid Image"
@@ -399,7 +422,7 @@ def api_predict(request):
         predicted_index = np.argmax(predictions[0])
         confidence = float(np.max(predictions[0])) * 100
 
-        THRESHOLD = 40
+        THRESHOLD = 75
         if confidence < THRESHOLD:
             predicted_class = "Invalid Image"
             history = "This image does not belong to the trained monuments dataset."

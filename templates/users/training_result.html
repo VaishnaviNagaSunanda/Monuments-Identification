@@ -1,74 +1,170 @@
-{%extends 'users/userbase.html'%}
-{%load static%}
-{%block contents%}
- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Training Results</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 30px;
-            background-color: #f9f9f9;
-            color: #333;
-        }
-        h2 {
-            color: #007BFF;
-        }
-        .metrics {
-            margin-bottom: 20px;
-        }
-        .metrics p {
-            font-size: 1.1em;
-            margin: 6px 0;
-        }
-        .plot {
-            max-width: 600px;
-            border: 1px solid #ddd;
-            padding: 10px;
-            background-color: white;
-        }
-        .model-path {
-            margin-top: 20px;
-            font-style: italic;
-            font-size: 0.9em;
-            color: #555;
-        }
-        .alert-warning {
-            background-color: #fff3cd;
-            border: 1px solid #ffc107;
-            border-radius: 5px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            color: #856404;
-        }
-    </style>
-</head>
-<body>
+{% extends 'users/userbase.html' %}
+{% load static %}
+{% block contents %}
+<style>
+    .results-container {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        margin-top: 1rem;
+    }
 
-    <h2>Model Training Results</h2>
+    .metrics-header {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 3rem;
+        text-align: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
 
+    .metrics-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #60a5fa, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 2rem;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 1.5rem;
+        border-radius: 16px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #60a5fa;
+        transform: translateY(-5px);
+    }
+
+    .metric-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.2rem;
+    }
+
+    .metric-label {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .plot-container {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 2rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .plot-img-wrapper {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+
+    .plot-img-wrapper img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+    }
+
+    .model-path-card {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.9rem;
+        color: #60a5fa;
+        margin-top: 1rem;
+        word-break: break-all;
+    }
+
+    .alert-premium {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        color: #fbbf24;
+        padding: 2rem;
+        border-radius: 20px;
+        text-align: center;
+    }
+    @media (max-width: 768px) {
+        .metrics-header { padding: 2rem 1.5rem; }
+        .metrics-title { font-size: 2rem; }
+        .metric-value { font-size: 1.5rem; }
+        .plot-container { padding: 1.5rem; }
+        .plot-img-wrapper { padding: 0.5rem; }
+    }
+
+    @media (max-width: 480px) {
+        .metrics-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="results-container">
     {% if error %}
-    <div class="alert-warning">
-        <strong>⚠️ Training Unavailable:</strong> {{ error }}
+    <div class="alert-premium fade-in-element">
+        <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+        <h3>Training Unavailable</h3>
+        <p style="color: #d1d5db;">{{ error }}</p>
     </div>
     {% else %}
-    <div class="metrics">
-        <p><strong>Training Accuracy:</strong> {{ accuracy|floatformat:4 }}</p>
-        <p><strong>Validation Accuracy:</strong> {{ val_accuracy|floatformat:4 }}</p>
-        <p><strong>Training Loss:</strong> {{ loss|floatformat:4 }}</p>
-        <p><strong>Validation Loss:</strong> {{ val_loss|floatformat:4 }}</p>
+    
+    <div class="metrics-header fade-in-element">
+        <h2 class="metrics-title">Training Performance</h2>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">{{ accuracy|floatformat:4 }}</div>
+                <div class="metric-label">Training Accuracy</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{{ val_accuracy|floatformat:4 }}</div>
+                <div class="metric-label">Validation Accuracy</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{{ loss|floatformat:4 }}</div>
+                <div class="metric-label">Training Loss</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">{{ val_loss|floatformat:4 }}</div>
+                <div class="metric-label">Validation Loss</div>
+            </div>
+        </div>
+        
+        <div class="model-path-card">
+            <i class="fas fa-save mr-2"></i> {{ model_path }}
+        </div>
     </div>
 
-    <div class="plot">
-        <img src="/{{ plot_path }}" alt="Training Loss and Accuracy Plot" style="width: 100%; height: auto;" />
+    <div class="plot-container fade-in-element">
+        <h4 class="text-white mb-3" style="font-family:'Outfit'"><i class="fas fa-chart-line mr-2" style="color:#60a5fa"></i> Loss & Accuracy Curves</h4>
+        <div class="plot-img-wrapper">
+            <img src="/{{ plot_path }}" alt="Training Metrics Plot">
+        </div>
     </div>
-
-    <p class="model-path">Model saved at: <code>{{ model_path }}</code></p>
+    
     {% endif %}
-
-</body>
-</html>
-{%endblock%}
+</div>
+{% endblock %}

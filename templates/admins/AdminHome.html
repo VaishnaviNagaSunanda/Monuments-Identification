@@ -1,15 +1,92 @@
 {% extends 'admins/adminbase.html'%}
-{%block contents%}
+{% block contents %}
+<style>
+    .admin-welcome {
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 4rem;
+        text-align: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        margin-top: 2rem;
+    }
 
-<section id="intro">
+    .welcome-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #10b981, #3b82f6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1rem;
+    }
 
-    <div class="intro-text">
-     <div class="container" style="margin-top:-200px;">
+    @media (max-width: 992px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
 
-      <p><h4 align="center" style="color:orange;">Welcome to Admin Homepage...</h4></p>
-    
-      </div>
-    </div><!--/.row-->
-</section>
+    @media (max-width: 600px) {
+        .welcome-section { padding: 2rem 1.5rem; }
+        .welcome-title { font-size: 1.8rem; }
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 1.2rem;
+        }
+    }
+    .admin-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+    }
 
-{%endblock%}
+    .admin-card {
+        background: rgba(16, 185, 129, 0.05);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        padding: 2rem;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+    }
+
+    .admin-card:hover {
+        transform: translateY(-5px);
+        background: rgba(16, 185, 129, 0.1);
+        border-color: #10b981;
+    }
+
+    .card-icon {
+        font-size: 2.5rem;
+        color: #10b981;
+        margin-bottom: 1rem;
+    }
+
+    .card-title {
+        color: white;
+        font-weight: 700;
+        font-size: 1.2rem;
+    }
+</style>
+
+<div class="admin-welcome fade-in-element">
+    <h1 class="welcome-title">Admin Command Center</h1>
+    <p class="text-secondary" style="font-size: 1.2rem;">Welcome back, Administrator. System status is optimal.</p>
+
+    <div class="admin-stats">
+        <div class="admin-card">
+            <i class="fas fa-users card-icon"></i>
+            <div class="card-title">User Management</div>
+        </div>
+        <div class="admin-card">
+            <i class="fas fa-database card-icon"></i>
+            <div class="card-title">Dataset Status</div>
+        </div>
+        <div class="admin-card">
+            <i class="fas fa-server card-icon"></i>
+            <div class="card-title">System Health</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
